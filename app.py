@@ -13,29 +13,28 @@ app.config['SQLALCHEMY_DATABASE_URI'] = prefix + os.path.join(app.root_path, 'da
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
-@app.cli.command()  # 注册为命令，可以传入 name 参数来自定义命令
-@click.option('--drop', is_flag=True, help='Create after drop.')  # 设置选项
+@app.cli.command()
+@click.option('--drop', is_flag=True, help='Create after drop.')
 def initdb(drop):
     """Initialize the database."""
-    if drop:  # 判断是否输入了选项
+    if drop:
         db.drop_all()
     db.create_all()
-    click.echo('Initialized database.')  # 输出提示信息
+    click.echo('Initialized database.')
 
-class User(db.Model):  # 表名将会是 user（自动生成，小写处理）
-    id = db.Column(db.Integer, primary_key=True)  # 主键
-    name = db.Column(db.String(20))  # 名字
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(20))
 
-class Movie(db.Model):  # 表名将会是 movie
-    id = db.Column(db.Integer, primary_key=True)  # 主键
-    title = db.Column(db.String(60))  # 电影标题
-    year = db.Column(db.String(4))  # 电影年份
+class Movie(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(60))
+    year = db.Column(db.String(4))
 
 @app.cli.command()
 def forge():
     db.create_all()
 
-    # 全局的两个变量移动到这个函数内
     name = 'NeNoOD'
     movies = [
         {'title': 'My Neighbor Totoro', 'year': '1988'},
@@ -59,15 +58,23 @@ def forge():
     db.session.commit()
     click.echo('Done.')
 
+@app.context_processor
+def inject_user():
+    user = User.query.first()
+    return dict(user = user)
+
 @app.route('/hello/')
 def hello():
     return 'hello, world'
 
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template('404.html'), 404
+
 @app.route('/')
 def index():
-    user = User.query.first()
     movies = Movie.query.all()
-    return render_template('index.html', user = user, movies = movies)
+    return render_template('index.html', movies = movies)
 
 if __name__ == '__main__':
     app.run(debug=True)
